@@ -101,6 +101,7 @@
             // =====================================================================
             // URL DA SUA PLANILHA (WEBHOOK)
             // =====================================================================
+            // SE O SEU LINK MUDOU NA "NOVA IMPLANTAÇÃO", COLE-O ENTRE AS ASPAS ABAIXO:
             const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyHqlONNcLeSMAw0bgMsZwxnul1fe1lmSYL7mFvrmcRJZyYKpkB-_6x4VDapZGDUy9B/exec"; 
             // =====================================================================
 
@@ -148,6 +149,7 @@
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
+                        // Comprime para JPG e cria o Base64 pesado
                         currentFotoBase64 = canvas.toDataURL('image/jpeg', 0.6);
                         
                         fotoPreview.src = currentFotoBase64;
@@ -221,11 +223,12 @@
             btnStart.addEventListener('click', iniciarLeitor);
             btnStop.addEventListener('click', pararLeitor);
 
-            // --- Salvar na Planilha via FETCH (Solução Anti-Bloqueio CORS) ---
+            // --- Salvar na Planilha via FETCH (Formato JSON Perfeito) ---
             btnSheets.addEventListener('click', async () => {
                 btnSheets.innerHTML = `<i class="ph ph-spinner ph-spin text-xl"></i> A enviar para a Planilha...`;
                 btnSheets.disabled = true;
 
+                // Aqui nós criamos o pacote pesado em JSON (Ideal para suportar imagens)
                 const payload = {
                     nf: currentNumero,
                     chave: currentChave,
@@ -234,8 +237,8 @@
                 };
 
                 try {
-                    // O mode: 'no-cors' envia os dados silenciosamente e impede que o navegador dê erro
-                    // tentando ler a tela de "Sucesso" que o Google Sheets devolve.
+                    // Mantemos o mode: 'no-cors' para a conexão não ser barrada,
+                    // mas informamos que o conteúdo que estamos enviando é um texto simples em JSON
                     await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
                         method: 'POST',
                         mode: 'no-cors',
@@ -245,7 +248,7 @@
                         }
                     });
                     
-                    // Se chegou até aqui sem cair no 'catch', o envio aconteceu.
+                    // Como estamos em 'no-cors', se não gerar erro de rede, consideramos sucesso visual
                     btnSheets.classList.remove('bg-[#0F9D58]', 'hover:bg-[#0b8043]');
                     btnSheets.classList.add('bg-gray-400');
                     btnSheets.innerHTML = `<i class="ph-fill ph-check-circle text-xl"></i> Salvo com Sucesso!`;
@@ -255,7 +258,9 @@
                     }
 
                 } catch (error) {
-                    alert("Erro de conexão. Verifique se o seu celular tem internet.\n\nDetalhe: " + error.message);
+                    alert("Erro de conexão. Verifique se o seu celular tem internet.
+
+Detalhe: " + error.message);
                     btnSheets.innerHTML = `<i class="ph-fill ph-cloud-arrow-up text-xl"></i> Tentar Novamente`;
                     btnSheets.disabled = false;
                 }
@@ -263,7 +268,12 @@
 
             btnWhatsapp.addEventListener('click', () => {
                 const data = new Date().toLocaleString('pt-BR');
-                let mensagem = `📦 *Recebimento de Material*\n\n✅ Mercadoria conferida.\n*NF:* ${currentNumero}\n*Chave:* ${currentChave}\n*Data:* ${data}`;
+                let mensagem = `📦 *Recebimento de Material*
+
+✅ Mercadoria conferida.
+*NF:* ${currentNumero}
+*Chave:* ${currentChave}
+*Data:* ${data}`;
                 window.open(`https://wa.me/?text=${encodeURIComponent(mensagem)}`, '_blank');
             });
         });
