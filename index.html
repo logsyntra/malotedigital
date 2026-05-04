@@ -67,7 +67,7 @@
                     <span class="font-bold text-sm">Comprovante (Opcional)</span>
                 </div>
                 
-                <!-- Input nativo de câmera escondido -->
+                <!-- Input nativo de câmara escondido -->
                 <input type="file" accept="image/*" capture="environment" id="input-camera" class="hidden">
                 
                 <button id="btn-tirar-foto" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-sm text-sm">
@@ -98,12 +98,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // =====================================================================
             // URL DA SUA PLANILHA (WEBHOOK)
-            // =====================================================================
-            // SE O SEU LINK MUDOU NA "NOVA IMPLANTAÇÃO", COLE-O ENTRE AS ASPAS ABAIXO:
-            const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyHqlONNcLeSMAw0bgMsZwxnul1fe1lmSYL7mFvrmcRJZyYKpkB-_6x4VDapZGDUy9B/exec"; 
-            // =====================================================================
+            const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbySA3TYaWD1tl8TGgTBd-bkshdfCf2iD0Zaz_DAZQY_Wvg9023lo_UhTYU_WSJp_pEH/exec"; 
 
             let html5QrcodeScanner;
             let currentChave = "";
@@ -127,46 +123,51 @@
             const fotoPreview = document.getElementById('foto-preview');
             const btnRemoverFoto = document.getElementById('btn-remover-foto');
 
-            // --- Câmera e Compressão da Foto ---
-            btnTirarFoto.addEventListener('click', () => inputCamera.click());
+            // --- Câmara e Compressão da Foto ---
+            if(btnTirarFoto) {
+                btnTirarFoto.addEventListener('click', () => inputCamera.click());
+            }
 
-            inputCamera.addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (!file) return;
+            if(inputCamera) {
+                inputCamera.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
 
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = function(event) {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.onload = function() {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800;
-                        const scaleSize = MAX_WIDTH / img.width;
-                        canvas.width = MAX_WIDTH;
-                        canvas.height = img.height * scaleSize;
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onload = function(event) {
+                        const img = new Image();
+                        img.src = event.target.result;
+                        img.onload = function() {
+                            const canvas = document.createElement('canvas');
+                            const MAX_WIDTH = 800; // Reduz a imagem
+                            const scaleSize = MAX_WIDTH / img.width;
+                            canvas.width = MAX_WIDTH;
+                            canvas.height = img.height * scaleSize;
 
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                        // Comprime para JPG e cria o Base64 pesado
-                        currentFotoBase64 = canvas.toDataURL('image/jpeg', 0.6);
-                        
-                        fotoPreview.src = currentFotoBase64;
-                        fotoPreviewContainer.classList.remove('hidden');
-                        btnTirarFoto.classList.add('hidden');
+                            // Comprime para JPG e cria o Base64 pesado
+                            currentFotoBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                            
+                            fotoPreview.src = currentFotoBase64;
+                            fotoPreviewContainer.classList.remove('hidden');
+                            btnTirarFoto.classList.add('hidden');
+                        }
                     }
-                }
-            });
+                });
+            }
 
-            btnRemoverFoto.addEventListener('click', () => {
-                currentFotoBase64 = "";
-                inputCamera.value = "";
-                fotoPreviewContainer.classList.add('hidden');
-                btnTirarFoto.classList.remove('hidden');
-                btnTirarFoto.classList.add('flex');
-            });
-
+            if(btnRemoverFoto) {
+                btnRemoverFoto.addEventListener('click', () => {
+                    currentFotoBase64 = "";
+                    inputCamera.value = "";
+                    fotoPreviewContainer.classList.add('hidden');
+                    btnTirarFoto.classList.remove('hidden');
+                    btnTirarFoto.classList.add('flex');
+                });
+            }
 
             // --- Leitura do Código de Barras ---
             function processaLeitura(codigo) {
@@ -192,20 +193,28 @@
             }
 
             function iniciarLeitor() {
-                resultCard.classList.add('hidden');
-                resultCard.classList.remove('flex');
-                overlay.classList.add('hidden');
-                btnStart.classList.add('hidden');
-                btnStop.classList.remove('hidden');
-                btnStop.classList.add('flex');
+                try {
+                    resultCard.classList.add('hidden');
+                    resultCard.classList.remove('flex');
+                    overlay.classList.add('hidden');
+                    btnStart.classList.add('hidden');
+                    btnStop.classList.remove('hidden');
+                    btnStop.classList.add('flex');
 
-                html5QrcodeScanner = new Html5Qrcode("reader");
-                html5QrcodeScanner.start(
-                    { facingMode: "environment" },
-                    { fps: 10, qrbox: { width: 300, height: 100 }, formatsToSupport: [ Html5QrcodeSupportedFormats.CODE_128 ] },
-                    (decodedText) => processaLeitura(decodedText),
-                    (err) => {}
-                ).catch(err => { alert("Erro na câmera: " + err); pararLeitor(); });
+                    html5QrcodeScanner = new Html5Qrcode("reader");
+                    html5QrcodeScanner.start(
+                        { facingMode: "environment" },
+                        { fps: 10, qrbox: { width: 300, height: 100 }, formatsToSupport: [ Html5QrcodeSupportedFormats.CODE_128 ] },
+                        (decodedText) => processaLeitura(decodedText),
+                        (err) => {} // Erros silenciosos da biblioteca para não assustar o utilizador
+                    ).catch(err => { 
+                        alert("Erro na câmara. Verifique as permissões do seu navegador. Detalhe: " + err); 
+                        pararLeitor(); 
+                    });
+                } catch (e) {
+                    alert("Ocorreu um problema ao iniciar a câmara: " + e.message);
+                    pararLeitor();
+                }
             }
 
             function pararLeitor() {
@@ -220,62 +229,58 @@
                 }
             }
 
-            btnStart.addEventListener('click', iniciarLeitor);
-            btnStop.addEventListener('click', pararLeitor);
+            if(btnStart) btnStart.addEventListener('click', iniciarLeitor);
+            if(btnStop) btnStop.addEventListener('click', pararLeitor);
 
-            // --- Salvar na Planilha via FETCH (Formato JSON Perfeito) ---
-            btnSheets.addEventListener('click', async () => {
-                btnSheets.innerHTML = `<i class="ph ph-spinner ph-spin text-xl"></i> A enviar para a Planilha...`;
-                btnSheets.disabled = true;
+            // --- Salvar na Planilha via FETCH (Formato JSON) ---
+            if(btnSheets) {
+                btnSheets.addEventListener('click', async () => {
+                    btnSheets.innerHTML = `<i class="ph ph-spinner ph-spin text-xl"></i> A enviar para a Planilha...`;
+                    btnSheets.disabled = true;
 
-                // Aqui nós criamos o pacote pesado em JSON (Ideal para suportar imagens)
-                const payload = {
-                    nf: currentNumero,
-                    chave: currentChave,
-                    data: new Date().toLocaleString('pt-BR'),
-                    fotoBase64: currentFotoBase64
-                };
+                    // Cria o pacote JSON (Ideal para imagens)
+                    const payload = {
+                        nf: currentNumero,
+                        chave: currentChave,
+                        data: new Date().toLocaleString('pt-BR'),
+                        fotoBase64: currentFotoBase64
+                    };
 
-                try {
-                    // Mantemos o mode: 'no-cors' para a conexão não ser barrada,
-                    // mas informamos que o conteúdo que estamos enviando é um texto simples em JSON
-                    await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        body: JSON.stringify(payload),
-                        headers: {
-                            'Content-Type': 'text/plain;charset=utf-8'
+                    try {
+                        // Envio silencioso com no-cors
+                        await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            body: JSON.stringify(payload),
+                            headers: {
+                                'Content-Type': 'text/plain;charset=utf-8'
+                            }
+                        });
+                        
+                        // Se não falhou a rede, consideramos sucesso
+                        btnSheets.classList.remove('bg-[#0F9D58]', 'hover:bg-[#0b8043]');
+                        btnSheets.classList.add('bg-gray-400');
+                        btnSheets.innerHTML = `<i class="ph-fill ph-check-circle text-xl"></i> Salvo com Sucesso!`;
+                        
+                        if(currentFotoBase64) {
+                            btnRemoverFoto.click();
                         }
-                    });
-                    
-                    // Como estamos em 'no-cors', se não gerar erro de rede, consideramos sucesso visual
-                    btnSheets.classList.remove('bg-[#0F9D58]', 'hover:bg-[#0b8043]');
-                    btnSheets.classList.add('bg-gray-400');
-                    btnSheets.innerHTML = `<i class="ph-fill ph-check-circle text-xl"></i> Salvo com Sucesso!`;
-                    
-                    if(currentFotoBase64) {
-                        btnRemoverFoto.click();
+
+                    } catch (error) {
+                        alert("Erro de conexão. Verifique se tem internet.\n\nDetalhe: " + error.message);
+                        btnSheets.innerHTML = `<i class="ph-fill ph-cloud-arrow-up text-xl"></i> Tentar Novamente`;
+                        btnSheets.disabled = false;
                     }
+                });
+            }
 
-                } catch (error) {
-                    alert("Erro de conexão. Verifique se o seu celular tem internet.
-
-Detalhe: " + error.message);
-                    btnSheets.innerHTML = `<i class="ph-fill ph-cloud-arrow-up text-xl"></i> Tentar Novamente`;
-                    btnSheets.disabled = false;
-                }
-            });
-
-            btnWhatsapp.addEventListener('click', () => {
-                const data = new Date().toLocaleString('pt-BR');
-                let mensagem = `📦 *Recebimento de Material*
-
-✅ Mercadoria conferida.
-*NF:* ${currentNumero}
-*Chave:* ${currentChave}
-*Data:* ${data}`;
-                window.open(`https://wa.me/?text=${encodeURIComponent(mensagem)}`, '_blank');
-            });
+            if(btnWhatsapp) {
+                btnWhatsapp.addEventListener('click', () => {
+                    const data = new Date().toLocaleString('pt-BR');
+                    let mensagem = `📦 *Recebimento de Material*\n\n✅ Mercadoria conferida.\n*NF:* ${currentNumero}\n*Chave:* ${currentChave}\n*Data:* ${data}`;
+                    window.open(`https://wa.me/?text=${encodeURIComponent(mensagem)}`, '_blank');
+                });
+            }
         });
     </script>
 </body>
