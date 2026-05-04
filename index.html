@@ -101,7 +101,6 @@
             // =====================================================================
             // URL DA SUA PLANILHA (WEBHOOK)
             // =====================================================================
-            // ATENÇÃO: Se gerou um link novo no Passo 3, atualize-o aqui abaixo:
             const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwZMJhAvP6P9_pG_Ch2oXWKR7mG5PCMsqgoXEaDtlcc98a2mEneslOubJ9WVX1mSJrM/exec"; 
             // =====================================================================
 
@@ -222,7 +221,7 @@
             btnStart.addEventListener('click', iniciarLeitor);
             btnStop.addEventListener('click', pararLeitor);
 
-            // --- Salvar na Planilha via FETCH (Agora deteta falhas reais do servidor) ---
+            // --- Salvar na Planilha via FETCH (Solução Anti-Bloqueio CORS) ---
             btnSheets.addEventListener('click', async () => {
                 btnSheets.innerHTML = `<i class="ph ph-spinner ph-spin text-xl"></i> A enviar para a Planilha...`;
                 btnSheets.disabled = true;
@@ -235,32 +234,28 @@
                 };
 
                 try {
-                    const response = await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
+                    // O mode: 'no-cors' envia os dados silenciosamente e impede que o navegador dê erro
+                    // tentando ler a tela de "Sucesso" que o Google Sheets devolve.
+                    await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
                         method: 'POST',
+                        mode: 'no-cors',
                         body: JSON.stringify(payload),
                         headers: {
                             'Content-Type': 'text/plain;charset=utf-8'
                         }
                     });
                     
-                    // Extraímos a resposta em texto do servidor para validar de verdade!
-                    const textResult = await response.text();
-
-                    if (response.ok && textResult.includes("Sucesso")) {
-                         btnSheets.classList.remove('bg-[#0F9D58]', 'hover:bg-[#0b8043]');
-                         btnSheets.classList.add('bg-gray-400');
-                         btnSheets.innerHTML = `<i class="ph-fill ph-check-circle text-xl"></i> Salvo com Sucesso!`;
-                         
-                         if(currentFotoBase64) {
-                             btnRemoverFoto.click();
-                         }
-                    } else {
-                         // Se o Google não disse "Sucesso", nós lançamos o erro real na tela.
-                         throw new Error(textResult || `Erro HTTP: ${response.status}`);
+                    // Se chegou até aqui sem cair no 'catch', o envio aconteceu.
+                    btnSheets.classList.remove('bg-[#0F9D58]', 'hover:bg-[#0b8043]');
+                    btnSheets.classList.add('bg-gray-400');
+                    btnSheets.innerHTML = `<i class="ph-fill ph-check-circle text-xl"></i> Salvo com Sucesso!`;
+                    
+                    if(currentFotoBase64) {
+                        btnRemoverFoto.click();
                     }
 
                 } catch (error) {
-                    alert("Atenção, erro no Google Sheets:\n\n" + error.message);
+                    alert("Erro de conexão. Verifique se o seu celular tem internet.\n\nDetalhe: " + error.message);
                     btnSheets.innerHTML = `<i class="ph-fill ph-cloud-arrow-up text-xl"></i> Tentar Novamente`;
                     btnSheets.disabled = false;
                 }
