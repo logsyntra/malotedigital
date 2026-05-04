@@ -85,33 +85,29 @@
 
             <!-- Ações -->
             <div class="flex flex-col gap-2 mt-2">
-                <button id="btn-sheets" class="w-full bg-[#0F9D58] hover:bg-[#0b8043] text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-sm text-lg">
+                <button id="btn-sheets" class="w-full bg-[#0F9D58] hover:bg-[#0b8043] text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-sm text-lg transition-colors">
                     <i class="ph-fill ph-cloud-arrow-up text-xl"></i> Salvar Tudo no Sistema
                 </button>
                 
-                <button id="btn-whatsapp" class="w-full bg-[#25D366] text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-sm">
+                <button id="btn-whatsapp" class="w-full bg-[#25D366] text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-sm transition-colors">
                     <i class="ph-fill ph-whatsapp-logo text-xl"></i> Avisar Fiscal via WhatsApp
                 </button>
             </div>
         </div>
-
-        <!-- Estrutura Oculta para Envio de Dados Burlado Bloqueio CORS -->
-        <iframe name="hidden_iframe" id="hidden_iframe" class="hidden"></iframe>
-        <form id="post_form" action="https://script.google.com/macros/s/AKfycbxdRXNM7vrVHQbSeaMWkjdBqHY1IirMcWwxw47CR5QodZJsFBX00zEtQX5n4UZeN7-N/exec" method="POST" target="hidden_iframe" class="hidden">
-            <input type="hidden" name="nf" id="input_nf">
-            <input type="hidden" name="chave" id="input_chave">
-            <input type="hidden" name="data" id="input_data">
-            <input type="hidden" name="fotoBase64" id="input_foto">
-        </form>
-
     </main>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // =====================================================================
+            // URL DA SUA PLANILHA (WEBHOOK)
+            // =====================================================================
+            const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxdRXNM7vrVHQbSeaMWkjdBqHY1IirMcWwxw47CR5QodZJsFBX00zEtQX5n4UZeN7-N/exec"; 
+            // =====================================================================
+
             let html5QrcodeScanner;
             let currentChave = "";
             let currentNumero = "";
-            let currentFotoBase64 = ""; // Guarda a imagem processada
+            let currentFotoBase64 = "";
 
             const btnStart = document.getElementById('btn-start');
             const btnStop = document.getElementById('btn-stop');
@@ -124,14 +120,13 @@
             const btnSheets = document.getElementById('btn-sheets');
             const btnWhatsapp = document.getElementById('btn-whatsapp');
 
-            // Elementos da Foto
             const inputCamera = document.getElementById('input-camera');
             const btnTirarFoto = document.getElementById('btn-tirar-foto');
             const fotoPreviewContainer = document.getElementById('foto-preview-container');
             const fotoPreview = document.getElementById('foto-preview');
             const btnRemoverFoto = document.getElementById('btn-remover-foto');
 
-            // --- Lógica da Câmera (Foto) ---
+            // --- Câmera e Compressão da Foto ---
             btnTirarFoto.addEventListener('click', () => inputCamera.click());
 
             inputCamera.addEventListener('change', function(e) {
@@ -144,9 +139,8 @@
                     const img = new Image();
                     img.src = event.target.result;
                     img.onload = function() {
-                        // Comprime a imagem desenhando ela num Canvas menor
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800; // Reduz a resolução para 800px
+                        const MAX_WIDTH = 800;
                         const scaleSize = MAX_WIDTH / img.width;
                         canvas.width = MAX_WIDTH;
                         canvas.height = img.height * scaleSize;
@@ -154,10 +148,8 @@
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                        // Pega a string base64 leve (Qualidade 60%)
                         currentFotoBase64 = canvas.toDataURL('image/jpeg', 0.6);
                         
-                        // Mostra na tela
                         fotoPreview.src = currentFotoBase64;
                         fotoPreviewContainer.classList.remove('hidden');
                         btnTirarFoto.classList.add('hidden');
@@ -174,7 +166,7 @@
             });
 
 
-            // --- Lógica do Código de Barras (NF) ---
+            // --- Leitura do Código de Barras ---
             function processaLeitura(codigo) {
                 const chave = codigo.replace(/\D/g, ''); 
                 if (chave.length === 44) {
@@ -183,7 +175,6 @@
                     txtNumero.textContent = currentNumero;
                     txtChave.textContent = chave;
                     
-                    // Reseta os botões
                     btnSheets.disabled = false;
                     btnSheets.classList.remove('bg-gray-400');
                     btnSheets.classList.add('bg-[#0F9D58]', 'hover:bg-[#0b8043]');
@@ -230,39 +221,43 @@
             btnStart.addEventListener('click', iniciarLeitor);
             btnStop.addEventListener('click', pararLeitor);
 
-            // --- Salvar Planilha via Iframe (Bypass de CORS) ---
-            btnSheets.addEventListener('click', () => {
+            // --- Salvar na Planilha via FETCH (GitHub Pages Safe) ---
+            btnSheets.addEventListener('click', async () => {
                 btnSheets.innerHTML = `<i class="ph ph-spinner ph-spin text-xl"></i> Enviando dados e foto...`;
                 btnSheets.disabled = true;
 
-                // Preenche os campos do formulário oculto
-                document.getElementById('input_nf').value = currentNumero;
-                document.getElementById('input_chave').value = currentChave;
-                document.getElementById('input_data').value = new Date().toLocaleString('pt-BR');
-                document.getElementById('input_foto').value = currentFotoBase64;
-
-                const iframe = document.getElementById('hidden_iframe');
-                
-                // Evento para detetar quando o iframe terminou de carregar (significa que o envio concluiu)
-                iframe.onload = function() {
-                    btnSheets.classList.remove('bg-[#0F9D58]', 'hover:bg-[#0b8043]');
-                    btnSheets.classList.add('bg-gray-400');
-                    btnSheets.innerHTML = `<i class="ph-fill ph-check-circle text-xl"></i> Salvo com Sucesso!`;
-                    
-                    // Limpa a foto para a próxima nota (se houver)
-                    if(currentFotoBase64) {
-                        btnRemoverFoto.click();
-                    }
-                    
-                    // Limpa o evento para evitar múltiplos acionamentos
-                    iframe.onload = null;
+                const payload = {
+                    nf: currentNumero,
+                    chave: currentChave,
+                    data: new Date().toLocaleString('pt-BR'),
+                    fotoBase64: currentFotoBase64
                 };
 
                 try {
-                    // Submete o formulário nativo do HTML
-                    document.getElementById('post_form').submit();
+                    // O text/plain é o truque mestre para o Google Script aceitar a requisição via GitHub Pages sem erro de CORS.
+                    const response = await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
+                        method: 'POST',
+                        body: JSON.stringify(payload),
+                        headers: {
+                            'Content-Type': 'text/plain;charset=utf-8'
+                        }
+                    });
+                    
+                    // O Google Script às vezes retorna HTML com status 200, então apenas verificamos se não falhou a conexão
+                    if (response.ok || response.status === 200) {
+                         btnSheets.classList.remove('bg-[#0F9D58]', 'hover:bg-[#0b8043]');
+                         btnSheets.classList.add('bg-gray-400');
+                         btnSheets.innerHTML = `<i class="ph-fill ph-check-circle text-xl"></i> Salvo com Sucesso!`;
+                         
+                         if(currentFotoBase64) {
+                             btnRemoverFoto.click();
+                         }
+                    } else {
+                         throw new Error(`Erro de resposta do servidor: ${response.status}`);
+                    }
+
                 } catch (error) {
-                    alert("Erro interno a enviar o formulário: " + error.message);
+                    alert("Ocorreu um erro no envio.\nDetalhe: " + error.message);
                     btnSheets.innerHTML = `<i class="ph-fill ph-cloud-arrow-up text-xl"></i> Tentar Novamente`;
                     btnSheets.disabled = false;
                 }
