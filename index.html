@@ -101,7 +101,8 @@
             // =====================================================================
             // URL DA SUA PLANILHA (WEBHOOK)
             // =====================================================================
-            const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxdRXNM7vrVHQbSeaMWkjdBqHY1IirMcWwxw47CR5QodZJsFBX00zEtQX5n4UZeN7-N/exec"; 
+            // ATENÇÃO: Se gerou um link novo no Passo 3, atualize-o aqui abaixo:
+            const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbyi40ozL1-QUvJ_qMfif6CNmMduOCTGBsbdGb6EwgONfswFMkC9JfnyIBCQt6f1Sw5e/exec"; 
             // =====================================================================
 
             let html5QrcodeScanner;
@@ -221,9 +222,9 @@
             btnStart.addEventListener('click', iniciarLeitor);
             btnStop.addEventListener('click', pararLeitor);
 
-            // --- Salvar na Planilha via FETCH (GitHub Pages Safe) ---
+            // --- Salvar na Planilha via FETCH (Agora deteta falhas reais do servidor) ---
             btnSheets.addEventListener('click', async () => {
-                btnSheets.innerHTML = `<i class="ph ph-spinner ph-spin text-xl"></i> Enviando dados e foto...`;
+                btnSheets.innerHTML = `<i class="ph ph-spinner ph-spin text-xl"></i> A enviar para a Planilha...`;
                 btnSheets.disabled = true;
 
                 const payload = {
@@ -234,7 +235,6 @@
                 };
 
                 try {
-                    // O text/plain é o truque mestre para o Google Script aceitar a requisição via GitHub Pages sem erro de CORS.
                     const response = await fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
                         method: 'POST',
                         body: JSON.stringify(payload),
@@ -243,8 +243,10 @@
                         }
                     });
                     
-                    // O Google Script às vezes retorna HTML com status 200, então apenas verificamos se não falhou a conexão
-                    if (response.ok || response.status === 200) {
+                    // Extraímos a resposta em texto do servidor para validar de verdade!
+                    const textResult = await response.text();
+
+                    if (response.ok && textResult.includes("Sucesso")) {
                          btnSheets.classList.remove('bg-[#0F9D58]', 'hover:bg-[#0b8043]');
                          btnSheets.classList.add('bg-gray-400');
                          btnSheets.innerHTML = `<i class="ph-fill ph-check-circle text-xl"></i> Salvo com Sucesso!`;
@@ -253,11 +255,12 @@
                              btnRemoverFoto.click();
                          }
                     } else {
-                         throw new Error(`Erro de resposta do servidor: ${response.status}`);
+                         // Se o Google não disse "Sucesso", nós lançamos o erro real na tela.
+                         throw new Error(textResult || `Erro HTTP: ${response.status}`);
                     }
 
                 } catch (error) {
-                    alert("Ocorreu um erro no envio.\nDetalhe: " + error.message);
+                    alert("Atenção, erro no Google Sheets:\n\n" + error.message);
                     btnSheets.innerHTML = `<i class="ph-fill ph-cloud-arrow-up text-xl"></i> Tentar Novamente`;
                     btnSheets.disabled = false;
                 }
