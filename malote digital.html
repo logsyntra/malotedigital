@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Malote Digital PRO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <style>
+        body { background-color: #f3f4f6; font-family: system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+        #reader { width: 100%; border-radius: 0.75rem; overflow: hidden; border: 2px solid #e5e7eb; background: #000; }
+        #reader video { object-fit: cover; }
+        #reader__dashboard_section_csr span { display: none !important; }
+        button:active { transform: scale(0.95); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col max-w-md mx-auto bg-white shadow-xl">
+
+    <header class="bg-emerald-700 text-white p-4 shadow-md flex items-center gap-3">
+        <i class="ph-fill ph-scan text-3xl"></i>
+        <div>
+            <h1 class="text-xl font-bold leading-tight">Malote Digital PRO</h1>
+            <p class="text-emerald-100 text-sm">Leitura e Comprovação (Canhoto)</p>
+        </div>
+    </header>
+
+    <main class="flex-1 p-4 flex flex-col gap-4 pb-10">
+        
+        <div id="reader-container" class="relative">
+            <div id="reader"></div>
+            <div id="scanner-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 rounded-xl border-2 border-dashed border-gray-300">
+                <i class="ph ph-barcode text-4xl text-gray-400 mb-2"></i>
+                <span class="text-gray-500 font-medium">Leitor desligado</span>
+            </div>
+        </div>
+
+        <div class="flex gap-2">
+            <button id="btn-start" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-sm">
+                <i class="ph ph-barcode text-xl"></i> Ler Código (Nota)
+            </button>
+            <button id="btn-stop" class="hidden flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-sm">
+                <i class="ph ph-stop text-xl"></i> Parar
+            </button>
+        </div>
+
+        <div id="result-card" class="hidden flex-col gap-3 mt-2 animate-[fadeIn_0.3s_ease-out]">
+            <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-xs text-gray-500 font-semibold uppercase">Número da NF</p>
+                        <p id="nf-numero" class="text-2xl font-bold text-gray-800">---</p>
+                    </div>
+                    <i class="ph-fill ph-check-circle text-2xl text-emerald-500"></i>
+                </div>
+                <div class="mt-2">
+                    <p class="text-xs text-gray-500 font-semibold uppercase">Chave</p>
+                    <p id="nf-chave" class="text-xs font-mono text-gray-600 break-all mt-1">---</p>
+                </div>
+            </div>
+
+            <!-- Seção da Foto do Canhoto -->
+            <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-col gap-3 shadow-sm">
+                <div class="flex items-center gap-2 text-blue-800">
+                    <i class="ph-fill ph-camera text-xl"></i>
+                    <span class="font-bold text-sm">Comprovante (Opcional)</span>
+                </div>
+                
+                <!-- Input nativo de câmera escondido -->
+                <input type="file" accept="image/*" capture="environment" id="input-camera" class="hidden">
+                
+                <button id="btn-tirar-foto" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg flex items-center justify-center gap-2 shadow-sm text-sm">
+                    <i class="ph ph-camera-plus text-lg"></i> Tirar Foto do Canhoto
+                </button>
+
+                <!-- Preview da foto tirada -->
+                <div id="foto-preview-container" class="hidden relative w-full h-32 rounded-lg overflow-hidden border-2 border-blue-300">
+                    <img id="foto-preview" src="" alt="Preview" class="w-full h-full object-cover">
+                    <button id="btn-remover-foto" class="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full shadow-md">
+                        <i class="ph ph-x"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ações -->
+            <div class="flex flex-col gap-2 mt-2">
+                <button id="btn-sheets" class="w-full bg-[#0F9D58] hover:bg-[#0b8043] text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-sm text-lg">
+                    <i class="ph-fill ph-cloud-arrow-up text-xl"></i> Salvar Tudo no Sistema
+                </button>
+                
+                <button id="btn-whatsapp" class="w-full bg-[#25D366] text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-sm">
+                    <i class="ph-fill ph-whatsapp-logo text-xl"></i> Avisar Fiscal via WhatsApp
+                </button>
+            </div>
+        </div>
+
+        <!-- Estrutura Oculta para Envio de Dados Burlado Bloqueio CORS -->
+        <iframe name="hidden_iframe" id="hidden_iframe" class="hidden"></iframe>
+        <form id="post_form" action="https://script.google.com/macros/s/AKfycbxdRXNM7vrVHQbSeaMWkjdBqHY1IirMcWwxw47CR5QodZJsFBX00zEtQX5n4UZeN7-N/exec" method="POST" target="hidden_iframe" class="hidden">
+            <input type="hidden" name="nf" id="input_nf">
+            <input type="hidden" name="chave" id="input_chave">
+            <input type="hidden" name="data" id="input_data">
+            <input type="hidden" name="fotoBase64" id="input_foto">
+        </form>
+
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            let html5QrcodeScanner;
+            let currentChave = "";
+            let currentNumero = "";
+            let currentFotoBase64 = ""; // Guarda a imagem processada
+
+            const btnStart = document.getElementById('btn-start');
+            const btnStop = document.getElementById('btn-stop');
+            const overlay = document.getElementById('scanner-overlay');
+            const resultCard = document.getElementById('result-card');
+            
+            const txtNumero = document.getElementById('nf-numero');
+            const txtChave = document.getElementById('nf-chave');
+            
+            const btnSheets = document.getElementById('btn-sheets');
+            const btnWhatsapp = document.getElementById('btn-whatsapp');
+
+            // Elementos da Foto
+            const inputCamera = document.getElementById('input-camera');
+            const btnTirarFoto = document.getElementById('btn-tirar-foto');
+            const fotoPreviewContainer = document.getElementById('foto-preview-container');
+            const fotoPreview = document.getElementById('foto-preview');
+            const btnRemoverFoto = document.getElementById('btn-remover-foto');
+
+            // --- Lógica da Câmera (Foto) ---
+            btnTirarFoto.addEventListener('click', () => inputCamera.click());
+
+            inputCamera.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = function() {
+                        // Comprime a imagem desenhando ela num Canvas menor
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 800; // Reduz a resolução para 800px
+                        const scaleSize = MAX_WIDTH / img.width;
+                        canvas.width = MAX_WIDTH;
+                        canvas.height = img.height * scaleSize;
+
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                        // Pega a string base64 leve (Qualidade 60%)
+                        currentFotoBase64 = canvas.toDataURL('image/jpeg', 0.6);
+                        
+                        // Mostra na tela
+                        fotoPreview.src = currentFotoBase64;
+                        fotoPreviewContainer.classList.remove('hidden');
+                        btnTirarFoto.classList.add('hidden');
+                    }
+                }
+            });
+
+            btnRemoverFoto.addEventListener('click', () => {
+                currentFotoBase64 = "";
+                inputCamera.value = "";
+                fotoPreviewContainer.classList.add('hidden');
+                btnTirarFoto.classList.remove('hidden');
+                btnTirarFoto.classList.add('flex');
+            });
+
+
+            // --- Lógica do Código de Barras (NF) ---
+            function processaLeitura(codigo) {
+                const chave = codigo.replace(/\D/g, ''); 
+                if (chave.length === 44) {
+                    currentChave = chave;
+                    currentNumero = parseInt(chave.substring(25, 34), 10).toString();
+                    txtNumero.textContent = currentNumero;
+                    txtChave.textContent = chave;
+                    
+                    // Reseta os botões
+                    btnSheets.disabled = false;
+                    btnSheets.classList.remove('bg-gray-400');
+                    btnSheets.classList.add('bg-[#0F9D58]', 'hover:bg-[#0b8043]');
+                    btnSheets.innerHTML = `<i class="ph-fill ph-cloud-arrow-up text-xl"></i> Salvar Tudo no Sistema`;
+
+                    pararLeitor();
+                    resultCard.classList.remove('hidden');
+                    resultCard.classList.add('flex');
+                    if (navigator.vibrate) navigator.vibrate(200);
+                } else {
+                    alert("Chave inválida. Lido: " + chave);
+                }
+            }
+
+            function iniciarLeitor() {
+                resultCard.classList.add('hidden');
+                resultCard.classList.remove('flex');
+                overlay.classList.add('hidden');
+                btnStart.classList.add('hidden');
+                btnStop.classList.remove('hidden');
+                btnStop.classList.add('flex');
+
+                html5QrcodeScanner = new Html5Qrcode("reader");
+                html5QrcodeScanner.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 300, height: 100 }, formatsToSupport: [ Html5QrcodeSupportedFormats.CODE_128 ] },
+                    (decodedText) => processaLeitura(decodedText),
+                    (err) => {}
+                ).catch(err => { alert("Erro na câmera: " + err); pararLeitor(); });
+            }
+
+            function pararLeitor() {
+                if (html5QrcodeScanner) {
+                    html5QrcodeScanner.stop().then(() => {
+                        html5QrcodeScanner.clear();
+                        overlay.classList.remove('hidden');
+                        btnStart.classList.remove('hidden');
+                        btnStop.classList.add('hidden');
+                        btnStop.classList.remove('flex');
+                    }).catch(e => console.log(e));
+                }
+            }
+
+            btnStart.addEventListener('click', iniciarLeitor);
+            btnStop.addEventListener('click', pararLeitor);
+
+            // --- Salvar Planilha via Iframe (Bypass de CORS) ---
+            btnSheets.addEventListener('click', () => {
+                btnSheets.innerHTML = `<i class="ph ph-spinner ph-spin text-xl"></i> Enviando dados e foto...`;
+                btnSheets.disabled = true;
+
+                // Preenche os campos do formulário oculto
+                document.getElementById('input_nf').value = currentNumero;
+                document.getElementById('input_chave').value = currentChave;
+                document.getElementById('input_data').value = new Date().toLocaleString('pt-BR');
+                document.getElementById('input_foto').value = currentFotoBase64;
+
+                const iframe = document.getElementById('hidden_iframe');
+                
+                // Evento para detetar quando o iframe terminou de carregar (significa que o envio concluiu)
+                iframe.onload = function() {
+                    btnSheets.classList.remove('bg-[#0F9D58]', 'hover:bg-[#0b8043]');
+                    btnSheets.classList.add('bg-gray-400');
+                    btnSheets.innerHTML = `<i class="ph-fill ph-check-circle text-xl"></i> Salvo com Sucesso!`;
+                    
+                    // Limpa a foto para a próxima nota (se houver)
+                    if(currentFotoBase64) {
+                        btnRemoverFoto.click();
+                    }
+                    
+                    // Limpa o evento para evitar múltiplos acionamentos
+                    iframe.onload = null;
+                };
+
+                try {
+                    // Submete o formulário nativo do HTML
+                    document.getElementById('post_form').submit();
+                } catch (error) {
+                    alert("Erro interno a enviar o formulário: " + error.message);
+                    btnSheets.innerHTML = `<i class="ph-fill ph-cloud-arrow-up text-xl"></i> Tentar Novamente`;
+                    btnSheets.disabled = false;
+                }
+            });
+
+            btnWhatsapp.addEventListener('click', () => {
+                const data = new Date().toLocaleString('pt-BR');
+                let mensagem = `📦 *Recebimento de Material*\n\n✅ Mercadoria conferida.\n*NF:* ${currentNumero}\n*Chave:* ${currentChave}\n*Data:* ${data}`;
+                window.open(`https://wa.me/?text=${encodeURIComponent(mensagem)}`, '_blank');
+            });
+        });
+    </script>
+</body>
+</html>
